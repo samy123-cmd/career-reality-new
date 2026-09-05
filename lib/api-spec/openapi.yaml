@@ -1,0 +1,555 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: workspace
+    description: Authenticated career workspace operations
+  - name: public-data
+    description: Public career signal datasets with freshness and methodology
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /workspace/summary:
+    get:
+      operationId: getWorkspaceSummary
+      tags: [workspace]
+      summary: Get the signed-in user's workspace summary
+      responses:
+        "200":
+          description: Workspace summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceSummary"
+        "401":
+          description: Unauthorized
+  /saved-decisions:
+    get:
+      operationId: listSavedDecisions
+      tags: [workspace]
+      summary: List the signed-in user's saved career decisions
+      responses:
+        "200":
+          description: Saved decisions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SavedDecision"
+        "401":
+          description: Unauthorized
+    post:
+      operationId: createSavedDecision
+      tags: [workspace]
+      summary: Save a career decision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SavedDecisionInput"
+      responses:
+        "201":
+          description: Saved decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedDecision"
+        "400":
+          description: Invalid saved decision
+        "401":
+          description: Unauthorized
+  /saved-decisions/{id}:
+    delete:
+      operationId: deleteSavedDecision
+      tags: [workspace]
+      summary: Delete one saved career decision
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Unauthorized
+        "404":
+          description: Saved decision not found
+  /watchlist:
+    get:
+      operationId: listWatchlist
+      tags: [workspace]
+      summary: List the signed-in user's company watchlist
+      responses:
+        "200":
+          description: Watchlist items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WatchlistItem"
+        "401":
+          description: Unauthorized
+    post:
+      operationId: createWatchlistItem
+      tags: [workspace]
+      summary: Add a company to the watchlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WatchlistInput"
+      responses:
+        "201":
+          description: Watchlist item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WatchlistItem"
+        "400":
+          description: Invalid watchlist item
+        "401":
+          description: Unauthorized
+  /watchlist/{id}:
+    delete:
+      operationId: deleteWatchlistItem
+      tags: [workspace]
+      summary: Remove a company from the watchlist
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Unauthorized
+        "404":
+          description: Watchlist item not found
+  /public/salary-benchmarks:
+    get:
+      operationId: listSalaryBenchmarks
+      tags: [public-data]
+      summary: List salary benchmarks
+      description: Returns explainable salary ranges with source and freshness metadata
+      parameters:
+        - name: role
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: city
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: experienceBand
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Salary benchmark dataset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalaryBenchmarksResponse"
+  /public/companies:
+    get:
+      operationId: listPublicCompanySignals
+      tags: [public-data]
+      summary: List company intelligence signals
+      parameters:
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Company signal dataset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicCompanySignalsResponse"
+  /public/companies/{slug}:
+    get:
+      operationId: getPublicCompanySignal
+      tags: [public-data]
+      summary: Get one company intelligence signal
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Company signal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicCompanySignalResponse"
+        "404":
+          description: Company signal not found
+  /public/layoff-signals:
+    get:
+      operationId: listLayoffSignals
+      tags: [public-data]
+      summary: List layoff and hiring signals
+      parameters:
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [Layoff, Hiring freeze, Hiring signal, Restructure]
+      responses:
+        "200":
+          description: Layoff signal dataset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LayoffSignalsResponse"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    WorkspaceSummary:
+      type: object
+      properties:
+        savedDecisionCount:
+          type: number
+        watchlistCount:
+          type: number
+        latestDecision:
+          anyOf:
+            - $ref: "#/components/schemas/SavedDecision"
+            - type: "null"
+        latestWatchlistItem:
+          anyOf:
+            - $ref: "#/components/schemas/WatchlistItem"
+            - type: "null"
+      required:
+        - savedDecisionCount
+        - watchlistCount
+        - latestDecision
+        - latestWatchlistItem
+    SavedDecision:
+      type: object
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum: [salary, risk, company, ai]
+        title:
+          type: string
+        summary:
+          type: string
+        signal:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - kind
+        - title
+        - summary
+        - signal
+        - createdAt
+    SavedDecisionInput:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [salary, risk, company, ai]
+        title:
+          type: string
+          minLength: 1
+        summary:
+          type: string
+          minLength: 1
+        signal:
+          type: string
+          minLength: 1
+      required:
+        - kind
+        - title
+        - summary
+        - signal
+    WatchlistItem:
+      type: object
+      properties:
+        id:
+          type: string
+        company:
+          type: string
+        note:
+          type: string
+        signal:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - company
+        - note
+        - signal
+        - createdAt
+    WatchlistInput:
+      type: object
+      properties:
+        company:
+          type: string
+          minLength: 1
+        note:
+          type: string
+          minLength: 1
+        signal:
+          type: string
+          minLength: 1
+      required:
+        - company
+        - note
+        - signal
+    DatasetMeta:
+      type: object
+      properties:
+        dataset:
+          type: string
+        refreshedAt:
+          type: string
+          format: date-time
+        source:
+          type: string
+        methodology:
+          type: string
+        confidence:
+          type: string
+          enum: [High, Medium, Low, Mixed]
+        sampleSize:
+          type: number
+      required:
+        - dataset
+        - refreshedAt
+        - source
+        - methodology
+        - confidence
+        - sampleSize
+    SalaryBenchmark:
+      type: object
+      properties:
+        id:
+          type: string
+        role:
+          type: string
+        city:
+          type: string
+        experienceBand:
+          type: string
+        p25:
+          type: number
+        median:
+          type: number
+        p75:
+          type: number
+        sampleSize:
+          type: number
+        source:
+          type: string
+        sourceUrl:
+          anyOf:
+            - type: string
+            - type: "null"
+        confidence:
+          type: string
+          enum: [High, Medium, Low, Mixed]
+        observedAt:
+          type: string
+          format: date-time
+        refreshedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - role
+        - city
+        - experienceBand
+        - p25
+        - median
+        - p75
+        - sampleSize
+        - source
+        - sourceUrl
+        - confidence
+        - observedAt
+        - refreshedAt
+    CompanySignal:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        sector:
+          type: string
+        stability:
+          type: number
+        momentum:
+          type: string
+        signal:
+          type: string
+        source:
+          type: string
+        sourceUrl:
+          anyOf:
+            - type: string
+            - type: "null"
+        confidence:
+          type: string
+          enum: [High, Medium, Low, Mixed]
+        observedAt:
+          type: string
+          format: date-time
+        refreshedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - slug
+        - name
+        - sector
+        - stability
+        - momentum
+        - signal
+        - source
+        - sourceUrl
+        - confidence
+        - observedAt
+        - refreshedAt
+    LayoffSignal:
+      type: object
+      properties:
+        id:
+          type: string
+        company:
+          type: string
+        signal:
+          type: string
+        type:
+          type: string
+          enum: [Layoff, Hiring freeze, Hiring signal, Restructure]
+        confidence:
+          type: string
+          enum: [High, Medium, Low, Mixed]
+        source:
+          type: string
+        sourceUrl:
+          anyOf:
+            - type: string
+            - type: "null"
+        observedAt:
+          type: string
+          format: date-time
+        refreshedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - company
+        - signal
+        - type
+        - confidence
+        - source
+        - sourceUrl
+        - observedAt
+        - refreshedAt
+    SalaryBenchmarksResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalaryBenchmark"
+        meta:
+          $ref: "#/components/schemas/DatasetMeta"
+      required:
+        - data
+        - meta
+    PublicCompanySignalsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CompanySignal"
+        meta:
+          $ref: "#/components/schemas/DatasetMeta"
+      required:
+        - data
+        - meta
+    PublicCompanySignalResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/CompanySignal"
+        meta:
+          $ref: "#/components/schemas/DatasetMeta"
+      required:
+        - data
+        - meta
+    LayoffSignalsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/LayoffSignal"
+        meta:
+          $ref: "#/components/schemas/DatasetMeta"
+      required:
+        - data
+        - meta
+
