@@ -2,3 +2,4 @@
 - [Public API route ordering](public-api-route-ordering.md) — mount unauthenticated data routes before the workspace router, whose catch-all auth middleware otherwise returns 401.
 - [Live editorial source fetching](live-editorial-source-fetch.md) — large parallel public-article scrapes can 500; keep source links and brief labeling when extraction is unstable.
 - [Browser regression runner](browser-regression-runner.md) — use the system Chromium executable for Playwright; keep video capture off because ffmpeg is not installed.
+- [GitHub connector upload filter](github-upload-filter.md) — some HTML and workflow writes can hit upstream Cloudflare 403s while ordinary repository files still upload.
